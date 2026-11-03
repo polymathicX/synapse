@@ -194,6 +194,52 @@ test('background suspension does not lose context and a UI message restarts it',
   await page.reload(); await expect(page.locator('#library')).toContainText('Fixture baseline'); await cdp.detach();
 });
 
+test('observed logged-out ChatGPT markup saves and restores through the installed extension', async () => {
+  const html = await readFile(new URL('../fixtures/chatgpt-logged-out.html', import.meta.url), 'utf8');
+  await context.route('https://chatgpt.com/**', route => {
+    const pathname = new URL(route.request().url()).pathname;
+    const body = pathname === '/new' ? html.replace(/<ol[\s\S]*<\/ol>/, '') : pathname === '/streaming' ? html.replace(' data-message-complete=""', '') : html;
+    return route.fulfill({ contentType: 'text/html', body });
+  });
+  const source = await context.newPage(); await source.goto('https://chatgpt.com/streaming');
+  await page.goto(`chrome-extension://${extensionId}/workspace.html`); await expect(page.locator('#save')).toBeEnabled();
+  await page.getByRole('checkbox', { name: 'Floating Synapse on ChatGPT', exact: true }).check(); await expect(page.locator('#save')).toBeEnabled();
+  await shadowAction(source, '✳ Save chat');
+  const error = await widgetNode(source, node => !!node.children?.some(child => child.nodeValue?.includes('still generating')));
+  await error.cdp.detach();
+  await source.goto('https://chatgpt.com/c/observed');
+  // The content script survives SPA navigation, but MessageSender.url can retain its injection URL.
+  await source.evaluate(() => history.pushState({}, '', '/c/cedar-spa'));
+  const rejected = await page.evaluate(async () => {
+    const tab = (await chrome.tabs.query({})).find(tab => tab.url?.endsWith('/c/cedar-spa'))!;
+    const results = [];
+    for (const pageUrl of ['https://chatgpt.com/c/observed', 'https://claude.ai/new']) {
+      const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id! }, func: (pageUrl: string) => chrome.runtime.sendMessage({ type: 'widget.capture', pageUrl }), args: [pageUrl] });
+      results.push(result!.result);
+    }
+    return results;
+  });
+  for (const result of rejected) { expect(result.ok).toBe(false); expect(result.error).toContain('chat changed'); }
+  await shadowAction(source, '✳ Save chat');
+  const saved = await widgetNode(source, node => node.nodeName === 'ARTICLE' && !!node.attributes?.includes('entry'));
+  await saved.cdp.detach();
+  await page.reload();
+  const entry = page.locator('#library button').filter({ hasText: 'reading app named Cedar' });
+  await expect(entry).toHaveCount(1); await entry.click();
+  await expect(page.locator('#messages')).toContainText('```javascript');
+  await expect(page.locator('#messages')).not.toContainText('Get better writing help');
+  const destination = await context.newPage(); await destination.goto('https://chatgpt.com/new');
+  await expect(destination.locator('#synapse-floating')).toBeAttached();
+  await destination.evaluate(() => history.replaceState({}, '', '/new?resume=cedar'));
+  await shadowAction(destination, '▤'); await shadowAction(destination, 'Insert');
+  await expect(destination.locator('#mobile-composer-prompt')).toHaveValue(/Working context:.*Cedar/s);
+  const original = await destination.locator('#mobile-composer-prompt').inputValue();
+  await shadowAction(destination, '▤'); await shadowAction(destination, 'Insert');
+  await expect(destination.locator('#mobile-composer-prompt')).toHaveValue(original);
+  await expect(destination.locator('[data-message-role]')).toHaveCount(0);
+  await source.close(); await destination.close();
+});
+
 test('records cold workspace timing and renderer heap with 100 metadata rows', async () => {
   await page.goto(`chrome-extension://${extensionId}/workspace.html`); await expect(page.locator('#save')).toBeEnabled();
   await page.evaluate(async () => {

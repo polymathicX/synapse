@@ -57,7 +57,7 @@ async function openWorkspace(id?: string): Promise<void> {
   await browser.tabs.create({ url: browser.runtime.getURL(`/workspace.html${id ? `?id=${encodeURIComponent(id)}` : ''}`) });
 }
 
-async function handle(request: Request): Promise<unknown> {
+async function handle(request: Request, expectedUrl?: string): Promise<unknown> {
   if (request.type === 'open-workspace') { await openWorkspace(request.snapshotId); return null; }
   if (request.type.startsWith('widget.')) throw new Error('Invalid routing request.');
   if (request.type !== 'capture' && request.type !== 'resume') throw new Error('Invalid request.');
@@ -65,6 +65,7 @@ async function handle(request: Request): Promise<unknown> {
   const tabId = request.tabId ?? (await browser.tabs.query({ active: true, currentWindow: true }))[0]?.id;
   if (tabId === undefined) throw new Error('No active tab is available.');
   const tab = await browser.tabs.get(tabId);
+  if (expectedUrl && tab.url !== expectedUrl) throw new Error('The chat changed before the operation completed. Try again on the intended conversation.');
   const provider = providerForUrl(tab.url ?? '');
   if (!provider) throw new Error('This page has no direct adapter. Open the workspace to paste context or import a Synapse file.');
   await browser.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: [provider.script] });
@@ -85,8 +86,12 @@ async function handle(request: Request): Promise<unknown> {
   return { reason: result.reason };
 }
 
-async function handleWidget(request: Request, tabId: number, url: string): Promise<unknown> {
+async function handleWidget(request: Request, tabId: number, senderUrl: string): Promise<unknown> {
+  const url = 'pageUrl' in request && request.pageUrl ? request.pageUrl : senderUrl;
   if (!providerForUrl(url)) throw new Error('This page does not support the floating tray.');
+  if (new URL(url).origin !== new URL(senderUrl).origin || (await browser.tabs.get(tabId)).url !== url) {
+    throw new Error('The chat changed before the operation completed. Try again on the intended conversation.');
+  }
   if (!await browser.permissions.contains({ origins: [`${new URL(url).origin}/*`] })) throw new Error('Access to this service was revoked. Re-enable floating Synapse from the toolbar.');
   if (request.type === 'widget.list') return (await repository.list(0, 5)).map(item => ({ id: item.id, title: item.title, provider: item.source.provider, files: item.attachmentCount }));
   if (request.type === 'widget.can-transfer') { await requireTransferConsent(); return null; }
@@ -113,7 +118,7 @@ async function handleWidget(request: Request, tabId: number, url: string): Promi
     const handoff = renderHandoff(snapshot);
     if (handoff.text.length > 100_000) throw new Error('This context is large. Shorten it in the workspace before transferring.');
     if (request.type === 'widget.handoff') return { text: handoff.text, files: snapshot.attachments.map(file => ({ name: file.name, available: file.availability === 'stored' })) };
-    return handle({ type: 'resume', tabId, text: handoff.text });
+    return handle({ type: 'resume', tabId, text: handoff.text }, url);
   }
   throw new Error('This action is unavailable from a provider page.');
 }

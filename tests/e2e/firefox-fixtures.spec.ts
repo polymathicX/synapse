@@ -1,6 +1,7 @@
 import { test, expect, firefox } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { CHATGPT_HTML, CLAUDE_HTML } from '../fixtures';
 import { parseSnapshot } from '../../core/model';
 
@@ -11,13 +12,14 @@ test.afterAll(async () => browser?.close());
 
 const fixtures = [
   { id: 'chatgpt', url: 'https://chatgpt.com/c/fixture', html: CHATGPT_HTML, composer: '#prompt-textarea' },
+  { id: 'chatgpt', label: 'chatgpt logged-out observed markup', url: 'https://chatgpt.com/', html: readFileSync(new URL('../fixtures/chatgpt-logged-out.html', import.meta.url), 'utf8'), composer: '#mobile-composer-prompt' },
   { id: 'claude', url: 'https://claude.ai/chat/fixture', html: CLAUDE_HTML, composer: '.ProseMirror' },
   { id: 'deepseek', url: 'https://chat.deepseek.com/', html: '<div data-message-role="user">Question</div><div data-message-role="assistant">Answer</div><textarea id="chat-input"></textarea>', composer: '#chat-input' },
   { id: 'kimi', url: 'https://www.kimi.com/', html: '<div class="chat-item user">Question</div><div class="chat-item assistant">Answer</div><div class="chat-input-editor" contenteditable="true"></div>', composer: '.chat-input-editor' },
   { id: 'qwen', url: 'https://chat.qwen.ai/', html: '<div class="user-message">Question</div><div class="assistant-message">Answer</div><textarea id="chat-input"></textarea>', composer: '#chat-input' },
 ];
 for (const fixture of fixtures) {
-  test(`Firefox DOM fixture: ${fixture.id} capture and draft preservation`, async () => {
+  test(`Firefox DOM fixture: ${fixture.label ?? fixture.id} capture and draft preservation`, async () => {
     await page.route(`${new URL(fixture.url).origin}/**`, route => route.fulfill({ body: fixture.html, contentType: 'text/html' }));
     await page.goto(fixture.url);
     // This is a browser-neutral adapter harness, not an installed Firefox add-on test.

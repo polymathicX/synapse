@@ -9,7 +9,7 @@ export interface ProviderAdapter {
   capture(document: Document): AdapterResult<ContextSnapshot>;
   insertDraft(document: Document, text: string): AdapterResult<null>;
 }
-export interface DomConfig { id: ProviderId; user: string; assistant: string; composer: string; content?: string }
+export interface DomConfig { id: ProviderId; user: string; assistant: string; composer: string; content?: string; streaming?: string }
 
 function visible(element: Element): boolean {
   if (element.closest('[hidden], [aria-hidden="true"]')) return false;
@@ -27,7 +27,8 @@ export function toMarkdown(root: Node): string {
     const body = code?.textContent ?? element.textContent ?? '';
     const longest = Math.max(2, ...[...body.matchAll(/`+/g)].map(match => match[0].length));
     const fence = '`'.repeat(longest + 1);
-    const language = /language-([\w+-]+)/.exec(code?.className ?? '')?.[1] ?? '';
+    const language = /language-([\w+-]+)/.exec(code?.className ?? '')?.[1]
+      ?? /^[\w+-]+$/.exec(code?.getAttribute('data-code-language') ?? '')?.[0] ?? '';
     return `\n\n${fence}${language}\n${body}\n${fence}\n\n`;
   }
   if (element.matches('annotation[encoding="application/x-tex"]')) return `$${element.textContent ?? ''}$`;
@@ -63,7 +64,8 @@ export function createDomAdapter(config: DomConfig): ProviderAdapter {
       snapshot.source = { provider: config.id, url: document.location.href.split('#')[0]!.slice(0, 2048), title: document.title.slice(0, 500) };
       snapshot.title = document.title.replace(/\s*[-|]\s*(ChatGPT|Claude|DeepSeek|Kimi|Qwen).*$/i, '').trim().slice(0, 200) || 'Captured context';
       snapshot.capture = { complete: false, warnings: ['Only loaded messages were captured. Earlier, collapsed, or virtualized history may be absent. Review before resuming.'] };
-      if (document.querySelector('[data-is-streaming="true"],.result-streaming,[data-testid="stop-button"],button[aria-label="Stop generating"]')) {
+      const streaming = ['[data-is-streaming="true"]', '.result-streaming', '[data-testid="stop-button"]', 'button[aria-label="Stop generating"]', ...(config.streaming ? [config.streaming] : [])].join(',');
+      if ([...document.querySelectorAll(streaming)].some(visible)) {
         return { status: 'unavailable', reason: 'A response is still generating. Wait for it to finish, then capture again.' };
       }
       let bytes = 0;
@@ -83,6 +85,9 @@ export function createDomAdapter(config: DomConfig): ProviderAdapter {
         }
       }
       if (!snapshot.messages.length) return { status: 'unavailable', reason: 'The recognized conversation contains no extractable text. Paste context manually.' };
+      if (/^(ChatGPT|Claude|DeepSeek|Kimi|Qwen)$/i.test(snapshot.title) || config.id === 'chatgpt' && /^ChatGPT\s*:/.test(snapshot.title)) {
+        snapshot.title = snapshot.messages.find(message => message.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 120) || snapshot.title;
+      }
       snapshot.summary = extractiveSummary(snapshot);
       snapshot.summaryKind = 'extractive';
       return { status: 'partial', value: snapshot, reason: snapshot.capture.warnings[0]! };
