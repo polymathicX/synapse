@@ -6,6 +6,7 @@
 - **Usability update:** opt-in floating one-click save; five recent draggable entries; destination drop/Insert; original-file access through Review / files. Services are enabled individually once.
 - **P1 implementation:** five independent provider adapters and synthetic fixture coverage. Authenticated compatibility remains a release gate.
 - **ChatGPT 0.1.1:** observed logged-out markup, SPA-safe capture/insertion, recognizable entry titles, and eight successful real-site checks in Brave. See [live evidence](live-chatgpt.md). Other providers and authenticated variants remain unverified live.
+- **ChatGPT 0.1.2:** actual signed-in/Project conversation inspected and verified in the installed Brave extension; 10 messages saved and a handoff restored without changing embedded writing documents or sending a message. See [signed-in evidence](signed-in-chatgpt.md). Other account rollouts and providers still require live verification.
 - **P2 implementation:** UTF-8/source, PDF, DOCX and PPTX text extraction with limitations; image previews; arbitrary original preservation. Direct binary attachment staging is capability-gated off because it has not been verified.
 - **P3 implementation:** default-off per-provider auto-save, scoped debouncing, duplicate-write avoidance, partial-history protection, metadata pagination, storage estimates, and manual deletion. No silent retention deletion.
 - **Engineering:** V1→V2 storage migration, archive corruption defenses, deterministic build/package scripts, CI, privacy disclosures and explicit browser-specific manifests.

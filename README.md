@@ -20,7 +20,7 @@ npm run package
 
 Open a provider, click the Synapse toolbar icon, and select **Enable floating Synapse on this service**. Alternatively open **Workspace** and check the services in the setup card. The first grant is required by the browser; after that saving and resuming happen on the chat pages.
 
-**Updating an existing unpacked install:** click **Reload** on Synapse in your browser's extensions page, then refresh your open ChatGPT tabs. The fix in **0.1.1** needs both steps so existing tabs receive the updated content script.
+**Updating an existing unpacked install:** replace the files in the directory you originally loaded with the new build, click **Reload** on Synapse in your browser's extensions page, then refresh your open ChatGPT tabs. Version **0.1.2** adds the observed signed-in/Project layout as well as the logged-out layout. Keep the same unpacked directory to retain the same extension ID and library.
 
 ## What is implemented
 
@@ -34,7 +34,7 @@ Open a provider, click the Synapse toolbar icon, and select **Enable floating Sy
 
 ## Boundaries that matter
 
-**Logged-out ChatGPT is verified live in Brave:** one-click save, insertion and native drag/drop into a new chat, existing-draft protection, actual ChatGPT consumption of the transferred draft, and browser-restart persistence. See the [live browser evidence](docs/live-chatgpt.md). Other providers and authenticated ChatGPT have fixture coverage, not live certification. Sites change their markup. Captures include loaded messages; Synapse cannot recover hidden history, provider memory, or original bytes that a page does not expose. Add original files through the workspace when necessary.
+**ChatGPT is verified live in Brave:** the reported signed-in Project conversation saved 10 loaded messages and restored its handoff into the actual composer without changing either embedded writing document or submitting a message. See the [signed-in verification](docs/signed-in-chatgpt.md). Logged-out save, insertion, native drag/drop, draft protection, provider consumption, and restart persistence were also [verified live](docs/live-chatgpt.md). Other providers and untested account variants retain fixture coverage. Sites change their markup. Captures include loaded messages; Synapse cannot recover hidden history, Project instructions, provider memory, or original bytes that a page does not expose. Add original files through the workspace when necessary.
 
 Drag/drop and Insert transfer the text handoff. Files are listed in the handoff and preserved locally, but require separate upload. Automatic binary attachment staging stays disabled until a provider integration is verified. The tray's **Review / files** button opens originals for download.
 
