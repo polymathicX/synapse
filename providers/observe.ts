@@ -19,6 +19,6 @@ export function observeConversation(document: Document, selector: string, captur
       return element?.closest(selector) || [...record.addedNodes, ...record.removedNodes].some(node => node.nodeType === 1 && ((node as Element).matches(selector) || (node as Element).querySelector(selector)));
     })) schedule();
   });
-  observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-is-streaming', 'data-message-complete'] });
+  observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-is-streaming', 'data-message-complete', 'data-talvt-turn-state'] });
   return () => { stopped = true; observer.disconnect(); clearTimeout(timer); };
 }

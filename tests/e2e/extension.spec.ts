@@ -30,8 +30,9 @@ async function widgetNode(target: Page, predicate: (node: DebugNode) => boolean)
 }
 async function shadowAction(target: Page, text: string) {
   const { cdp, nodeId } = await widgetNode(target, node => node.nodeName === 'BUTTON' && !!node.children?.some(child => child.nodeValue === text));
-  const { model } = await cdp.send('DOM.getBoxModel', { nodeId });
-  const quad = model.content; await target.mouse.click((quad[0]! + quad[4]!) / 2, (quad[1]! + quad[5]!) / 2); await cdp.detach();
+  const { object } = await cdp.send('DOM.resolveNode', { nodeId });
+  const { result } = await cdp.send('Runtime.callFunctionOn', { objectId: object.objectId!, functionDeclaration: 'function () { const r = this.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }', returnByValue: true });
+  await target.mouse.click(result.value.x, result.value.y); await cdp.detach();
 }
 
 async function savedCounts(): Promise<number[]> {
@@ -237,6 +238,36 @@ test('observed logged-out ChatGPT markup saves and restores through the installe
   await shadowAction(destination, '▤'); await shadowAction(destination, 'Insert');
   await expect(destination.locator('#mobile-composer-prompt')).toHaveValue(original);
   await expect(destination.locator('[data-message-role]')).toHaveCount(0);
+  await source.close(); await destination.close();
+});
+
+test('signed-in Project markup captures separate roles and targets the composer instead of writing blocks', async () => {
+  const html = await readFile(new URL('../fixtures/chatgpt-signed-in-project.html', import.meta.url), 'utf8');
+  await context.route('https://chatgpt.com/**', route => route.fulfill({ contentType: 'text/html', body: html }));
+  const source = await context.newPage(); await source.goto('https://chatgpt.com/g/g-p-fixture/project/c/source');
+  await page.goto(`chrome-extension://${extensionId}/workspace.html`); await expect(page.locator('#save')).toBeEnabled();
+  await page.getByRole('checkbox', { name: 'Floating Synapse on ChatGPT', exact: true }).check(); await expect(page.locator('#save')).toBeEnabled();
+  await shadowAction(source, '✳ Save chat');
+  const saved = await widgetNode(source, node => node.nodeName === 'ARTICLE' && !!node.attributes?.includes('entry'));
+  await saved.cdp.detach();
+  await page.reload(); await page.locator('#library button').filter({ hasText: 'Project Cedar' }).click();
+  await expect(page.locator('#messages .message')).toHaveCount(2);
+  await expect(page.locator('#messages')).toContainText('Document content stays in the assistant response.');
+  const destination = await context.newPage(); await destination.goto('https://chatgpt.com/g/g-p-fixture/project/c/destination');
+  const writingBlock = destination.getByRole('textbox', { name: 'Start writing', exact: true });
+  const original = await writingBlock.textContent();
+  await destination.getByRole('button', { name: 'Send prompt', exact: true }).evaluate(button => button.addEventListener('click', () => { document.body.dataset.synapseSubmitted = 'true'; }));
+  await shadowAction(destination, '▤'); await shadowAction(destination, 'Insert');
+  const composer = destination.locator('[data-composer-markdown]');
+  await expect(composer).toContainText('Working context: Project Cedar');
+  await expect(composer).toContainText("const project = 'Cedar';");
+  await expect(writingBlock).toHaveText(original!);
+  await expect(destination.locator('body')).not.toHaveAttribute('data-synapse-submitted');
+  const draft = await composer.innerText();
+  const closedTray = await widgetNode(destination, node => node.nodeName === 'SECTION' && !!node.attributes?.includes('tray hidden'));
+  await closedTray.cdp.detach();
+  await shadowAction(destination, '▤'); await shadowAction(destination, 'Insert');
+  await expect(composer).toHaveText(draft, { useInnerText: true });
   await source.close(); await destination.close();
 });
 

@@ -13,6 +13,7 @@ test.afterAll(async () => browser?.close());
 const fixtures = [
   { id: 'chatgpt', url: 'https://chatgpt.com/c/fixture', html: CHATGPT_HTML, composer: '#prompt-textarea' },
   { id: 'chatgpt', label: 'chatgpt logged-out observed markup', url: 'https://chatgpt.com/', html: readFileSync(new URL('../fixtures/chatgpt-logged-out.html', import.meta.url), 'utf8'), composer: '#mobile-composer-prompt' },
+  { id: 'chatgpt', label: 'chatgpt signed-in Project observed markup', url: 'https://chatgpt.com/g/g-p-fixture/project/c/fixture', html: readFileSync(new URL('../fixtures/chatgpt-signed-in-project.html', import.meta.url), 'utf8'), composer: '[data-composer-markdown]' },
   { id: 'claude', url: 'https://claude.ai/chat/fixture', html: CLAUDE_HTML, composer: '.ProseMirror' },
   { id: 'deepseek', url: 'https://chat.deepseek.com/', html: '<div data-message-role="user">Question</div><div data-message-role="assistant">Answer</div><textarea id="chat-input"></textarea>', composer: '#chat-input' },
   { id: 'kimi', url: 'https://www.kimi.com/', html: '<div class="chat-item user">Question</div><div class="chat-item assistant">Answer</div><div class="chat-input-editor" contenteditable="true"></div>', composer: '.chat-input-editor' },
