@@ -6,9 +6,10 @@
 | --- | --- |
 | Clean lockfile installation (`npm ci`) | Passed on Node 26.6.0 / npm 11.18.0, Windows |
 | Strict TypeScript + ESLint | Passed |
-| Unit/integration suite | 37 tests across 6 files passed |
-| Installed Chromium extension + Firefox DOM fixtures | 10 browser checks passed |
-| Installed native Brave, disposable profiles | 5 extension checks passed |
+| Unit/integration suite | 40 tests across 7 files passed |
+| Installed Chromium extension + Firefox DOM fixtures | 12 browser checks passed |
+| Installed native Brave, disposable profiles | 6 extension checks passed |
+| Actual logged-out ChatGPT in installed Brave | 8 live workflow checks passed; see [evidence and screenshots](live-chatgpt.md) |
 | Chromium and Firefox production MV3 builds | Passed; distinct background manifests asserted |
 | Bundle budgets | Passed for background, each adapter, floating widget, popup, and workspace |
 | Reproducible production output | Passed: 26 files per browser reproduced byte-for-byte |
@@ -17,7 +18,7 @@
 | Firefox temporary add-on installation/reload | Passed using Playwright-distributed Firefox 157 |
 | Runtime dependency audit | 0 known vulnerabilities (`npm audit --omit=dev`) |
 
-The browser checks use synthetic provider HTML at controlled provider origins, never authenticated accounts. The extension fixture copy pre-grants only ChatGPT/Claude host access; a separate case verifies rejection with the untouched production permission manifest. Browser/API behavior is real; the provider markup is a fixture.
+The default browser suite uses controlled provider HTML, including minimized markup observed on the real logged-out ChatGPT site. The extension fixture copy pre-grants only ChatGPT/Claude host access; a separate case verifies rejection with the untouched production permission manifest. Browser/API behavior is real; provider responses in this suite are fixtures. The separate opt-in live ChatGPT runner uses the actual website and unmodified production extension in a disposable logged-out profile, with its native host-access prompt accepted. It successfully saves, restores via Insert/native drag, protects drafts, explicitly submits test context to ChatGPT, and reopens saved data after a full browser restart.
 
 The Chromium/Brave suite covers:
 
@@ -30,8 +31,11 @@ The Chromium/Brave suite covers:
 - Opt-in auto-save after a conversation mutation; checkbox activation uses DOM activation in the closed-root test harness.
 - Background service-worker termination and restart via a UI request, with library persistence.
 - Capture rejection when host access/activeTab is absent.
+- Observed logged-out ChatGPT markup, SPA History API navigation, stale/different-origin URL rejection, and textarea restoration.
 
-Firefox's five DOM checks run compiled Firefox adapter bundles in Firefox with a minimal messaging harness. They validate extraction, native editor insertion, escaped markup, and draft protection; they do **not** verify an installed Firefox extension's full interaction, permissions, storage, or drag workflow. The separate `web-ext` startup check verifies temporary installation/reload only.
+Firefox's six DOM checks run compiled Firefox adapter bundles in Firefox with a minimal messaging harness. They validate extraction, native editor insertion, escaped markup, and draft protection; they do **not** verify an installed Firefox extension's full interaction, permissions, storage, or drag workflow. The separate `web-ext` startup check verifies temporary installation/reload only.
+
+The final Windows Firefox startup run installed and reloaded successfully, then its `firefox-profile` development dependency logged an `EPERM` warning while deleting its temporary profile during process teardown. The command exited successfully; this does not verify full Firefox workflows.
 
 ## Size and performance evidence
 
@@ -39,9 +43,9 @@ Production JavaScript sizes below are gzip measurements. Initial UI counts inclu
 
 | Entry | Chromium | Firefox | Budget |
 | --- | ---: | ---: | ---: |
-| Background | 8.54 KiB | 8.61 KiB | 50 KiB |
-| Individual provider adapter | 4.99 KiB | 4.99 KiB | 50 KiB |
-| Floating widget | 6.78 KiB | 6.78 KiB | 50 KiB |
+| Background | 8.65 KiB | 8.72 KiB | 50 KiB |
+| Individual provider adapter | 5.20 KiB | 5.20 KiB | 50 KiB |
+| Floating widget | 7.01 KiB | 7.01 KiB | 50 KiB |
 | Popup initial JS | 7.37 KiB | 7.41 KiB | 150 KiB |
 | Workspace initial JS | 12.87 KiB | 12.95 KiB | 150 KiB |
 
@@ -64,11 +68,11 @@ npm audit --omit=dev
 npm run package
 ```
 
-`check:reproducible` compares relative file lists and SHA-256 content hashes from two successive production builds per browser. Packaging sorts entries and fixes ZIP wall-clock timestamps. Local artifacts are unsigned; Firefox signing/store distribution is not included. CI is configured but has not been run on a remote CI service in this session.
+`check:reproducible` compares relative file lists and SHA-256 content hashes from two successive production builds per browser. Packaging sorts entries and fixes ZIP wall-clock timestamps. Local artifacts are unsigned; Firefox signing/store distribution is not included. The initial repository revision passed [GitHub Actions](https://github.com/polymathicX/synapse/actions/runs/41570634511); subsequent changes trigger the same CI gates.
 
 ## Findings and unverified behavior
 
-- **No live provider certification:** all five adapters need authenticated tests against current service markup, account variants, streaming, virtualization, and regenerated responses. Unknown layouts produce an explicit manual fallback.
+- **Limited live scope:** logged-out ChatGPT save/resume is verified in Brave. Authenticated ChatGPT and the other four providers still need live tests against current service markup, account variants, streaming, virtualization, and regenerated responses. Unknown layouts produce an explicit manual fallback.
 - **Firefox:** full installed-extension capture/save/drop, permission prompts/revocation, event-page lifecycle and restart persistence remain unverified. Google Chrome itself is not installed here; Chromium and installed Brave were exercised.
 - **Files:** byte preservation is verified with small synthetic originals. Binary upload automation is disabled for all adapters. OCR, image understanding, encrypted-PDF extraction, legacy Office decoding, complete layout/media extraction, and unlimited file sizes are not implemented.
 - **Reviewed vendor warnings:** PDF.js contains variable imports in optional fake-worker/decoder paths. Synapse supplies a packaged worker port, disables WASM/image rendering, and enforces self-only executable resources. `scripts/lint-firefox.mjs` permits only this warning code/message in the PDF worker assets, records the complete findings, and fails on anything else. Store review may still require further changes.

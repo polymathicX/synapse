@@ -36,6 +36,8 @@ Each compiled provider adapter implements probe/capture/insertDraft and returns 
 
 Runtime messages are JSON-only. Files never cross Chrome runtime messaging as Blob objects. Blobs are written/read in the extension origin or passed using dedicated-worker structured clone. The router validates schema, sender ID, frame and origin. Extension-page requests and content-script widget requests have separate capabilities; provider scripts cannot request arbitrary tab orchestration. Revoked host access blocks widget data requests and removes the floating UI. Firefox transfer consent is rechecked before exposing handoffs.
 
+Widget requests include the current page URL at the moment of the action. A content script can survive SPA history changes while its runtime sender URL retains the injection URL. The background validates the action URL against the sender's origin and the current tab, then carries it through capture/insertion checks. This permits in-page chat navigation while rejecting stale destinations and different-origin requests.
+
 Only opted-in origins receive dynamically registered content scripts. The widget uses an isolated execution world and a closed shadow root; it never bridges requests through page `postMessage`. Dragging intentionally exposes text/plain context to the drop destination. Drop insertion checks the composer, protects drafts, and never clicks Send.
 
 ## Portability and hostile input

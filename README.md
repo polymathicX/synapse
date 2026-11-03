@@ -20,6 +20,8 @@ npm run package
 
 Open a provider, click the Synapse toolbar icon, and select **Enable floating Synapse on this service**. Alternatively open **Workspace** and check the services in the setup card. The first grant is required by the browser; after that saving and resuming happen on the chat pages.
 
+**Updating an existing unpacked install:** click **Reload** on Synapse in your browser's extensions page, then refresh your open ChatGPT tabs. The fix in **0.1.1** needs both steps so existing tabs receive the updated content script.
+
 ## What is implemented
 
 - Floating one-click save, five recent draggable entries, insertion into an empty composer, and a workspace for all entries.
@@ -32,7 +34,7 @@ Open a provider, click the Synapse toolbar icon, and select **Enable floating Sy
 
 ## Boundaries that matter
 
-Provider adapters have **synthetic fixture coverage**, not authenticated live-service certification. Sites change their markup. Captures include loaded messages; Synapse cannot recover hidden history, provider memory, or original bytes that a page does not expose. Add original files through the workspace when necessary.
+**Logged-out ChatGPT is verified live in Brave:** one-click save, insertion and native drag/drop into a new chat, existing-draft protection, actual ChatGPT consumption of the transferred draft, and browser-restart persistence. See the [live browser evidence](docs/live-chatgpt.md). Other providers and authenticated ChatGPT have fixture coverage, not live certification. Sites change their markup. Captures include loaded messages; Synapse cannot recover hidden history, provider memory, or original bytes that a page does not expose. Add original files through the workspace when necessary.
 
 Drag/drop and Insert transfer the text handoff. Files are listed in the handoff and preserved locally, but require separate upload. Automatic binary attachment staging stays disabled until a provider integration is verified. The tray's **Review / files** button opens originals for download.
 
@@ -54,7 +56,9 @@ npm run check:reproducible
 npm audit --omit=dev
 ```
 
-The installed-extension tests use a disposable copy with host grants for controlled ChatGPT/Claude fixtures. A separate test uses the unmodified least-privilege production manifest. No real account, conversation, or existing browser profile is used.
+The default installed-extension tests use a disposable copy with host grants for controlled provider fixtures, including markup observed on real logged-out ChatGPT. A separate case uses the unmodified production manifest. These automated checks use no existing account or browser profile.
+
+To test the actual logged-out ChatGPT site, run `npm run test:live:chatgpt`. It opens a disposable browser with the unmodified production extension. Approve its ChatGPT permission prompt. The test sends a generated Cedar app task, saves it, restores it into a new real chat, explicitly submits the test handoff, and checks persistence after restarting. It writes screenshots and results to `artifacts/chatgpt-live*`; it uses no request routing or provider response mocks.
 
 To run the Chromium extension suite against an installed Brave browser in PowerShell:
 

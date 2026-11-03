@@ -1,6 +1,6 @@
 {
   "name": "synapse-context",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Local-first AI context and original-file portability for Chrome, Brave, and Firefox.",
@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:live:chatgpt": "npm run build:chromium && node scripts/chatgpt-live.mjs",
     "test:firefox-startup": "node scripts/firefox-smoke.mjs",
     "build": "wxt build --mv3 && wxt build -b firefox --mv3 && node scripts/check-build.mjs",
     "build:chromium": "wxt build --mv3",
