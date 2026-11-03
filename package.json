@@ -1,0 +1,48 @@
+{
+  "name": "synapse-context",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first AI context and original-file portability for Chrome, Brave, and Firefox.",
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "scripts": {
+    "dev": "wxt --mv3",
+    "dev:firefox": "wxt -b firefox --mv3",
+    "postinstall": "wxt prepare",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:firefox-startup": "node scripts/firefox-smoke.mjs",
+    "build": "wxt build --mv3 && wxt build -b firefox --mv3 && node scripts/check-build.mjs",
+    "build:chromium": "wxt build --mv3",
+    "lint:firefox": "node scripts/lint-firefox.mjs",
+    "check:reproducible": "node scripts/reproducible.mjs",
+    "package": "node scripts/package.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run lint:firefox"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "idb": "8.0.4",
+    "pdfjs-dist": "6.5.438",
+    "saxes": "6.0.0",
+    "valibot": "1.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@playwright/test": "1.64.1",
+    "@types/chrome": "^0.3.7",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.0.0",
+    "eslint": "^10.0.0",
+    "fake-indexeddb": "^6.2.4",
+    "jsdom": "^29.0.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "5.1.0",
+    "web-ext": "^10.0.0",
+    "wxt": "0.21.5"
+  }
+}
